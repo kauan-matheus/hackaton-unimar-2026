@@ -9,11 +9,14 @@ type OpenSearchQuote = {
 type QuotationPayload = {
   peso?: number
   cep?: string | number
+  uf?: string
   request_quotation?: OpenSearchQuote[] | null
 }
 
 type OpenSearchHit = {
+  _id?: string
   _source?: {
+    id?: string
     nf?: QuotationPayload
   }
 }
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
   const searchParams = new URLSearchParams({
     size: "500",
     sort: "@timestamp:desc",
-    _source: "nf",
+    _source: "nf,id",
   })
   const endpoint = `https://api.opensearch.sisfrete.com.br/${index}/_search?${searchParams}`
 
@@ -91,8 +94,10 @@ export async function GET(request: NextRequest) {
       const payload = hit._source?.nf
       if (!payload?.request_quotation) return []
 
+      const quotationId = hit._source?.id ?? hit._id
       const weight = Number(payload.peso)
       const postalCode = String(payload.cep ?? "").padStart(8, "0")
+      const state = payload.uf?.trim().toUpperCase() ?? ""
 
       return payload.request_quotation.flatMap((quotation) => {
         const carrier = quotation.shipping_company?.trim()
@@ -104,12 +109,24 @@ export async function GET(request: NextRequest) {
           !Number.isFinite(freight) ||
           !Number.isFinite(deadline) ||
           !Number.isFinite(weight) ||
-          !/^\d{8}$/.test(postalCode)
+          !/^\d{8}$/.test(postalCode) ||
+          !/^[A-Z]{2}$/.test(state) ||
+          !quotationId
         ) {
           return []
         }
 
-        return [{ carrier, freight, deadline, weight, postalCode }]
+        return [
+          {
+            quotationId,
+            carrier,
+            freight,
+            deadline,
+            weight,
+            postalCode,
+            state,
+          },
+        ]
       })
     })
 

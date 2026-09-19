@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist_Mono, IBM_Plex_Sans } from "next/font/google"
 
+import "@arkn/react-map-chart/dist/style.css"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"

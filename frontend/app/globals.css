@@ -111,6 +111,45 @@
 .aggregation-note { margin: auto 0 2px auto; color: #74818c; font-size: 12px; line-height: 18px; text-align: right; }
 .compact-state { min-height: 180px; }
 
+.heatmap-card { margin-top: 18px; border: 1px solid var(--border); border-radius: 10px; background: #fff; overflow: hidden; }
+.heatmap-header { min-height: 94px; display: flex; align-items: center; justify-content: space-between; gap: 32px; border-bottom: 1px solid #e8ebee; padding: 18px 22px; }
+.heatmap-header .eyebrow { margin-bottom: 4px; font-size: 10px; }
+.heatmap-header h2 { margin: 0; color: #273440; font-size: 18px; line-height: 24px; font-weight: 650; }
+.heatmap-header p { margin: 4px 0 0; color: #788590; font-size: 13px; line-height: 19px; }
+.heat-scale { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #788590; font-size: 10px; }
+.heat-scale i { width: 18px; height: 10px; border-radius: 2px; }
+.heat-scale i:nth-of-type(1) { background: #d8eee7; }
+.heat-scale i:nth-of-type(2) { background: #92cfba; }
+.heat-scale i:nth-of-type(3) { background: #42ad88; }
+.heat-scale i:nth-of-type(4) { background: #00784f; }
+.heatmap-content { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(360px, .82fr); min-height: 470px; }
+.brazil-map-wrapper { min-width: 0; display: grid; place-items: center; border-right: 1px solid #e8ebee; padding: 22px 32px; }
+.brazil-map-wrapper .v3mc-container { width: 100%; max-width: 620px; }
+.brazil-map-wrapper svg { display: block; max-width: 100%; margin: auto; }
+.state-insights { padding: 24px; background: #fbfcfc; }
+.selected-state-heading { padding-bottom: 18px; border-bottom: 1px solid #e4e9e6; }
+.selected-state-heading span, .state-ranking > span, .postal-highlight span { display: block; color: #77848f; font-size: 10px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+.selected-state-heading h3 { margin: 5px 0 0; color: #26343f; font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -.3px; }
+.state-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border-bottom: 1px solid #e4e9e6; }
+.state-metrics > div { min-width: 0; display: grid; align-content: center; min-height: 100px; padding: 14px 12px 14px 0; }
+.state-metrics > div:nth-child(odd) { border-right: 1px solid #e4e9e6; }
+.state-metrics > div:nth-child(even) { padding-left: 16px; }
+.state-metrics > div:nth-child(-n+2) { border-bottom: 1px solid #e4e9e6; }
+.state-metrics span { color: #77848f; font-size: 11px; }
+.state-metrics strong { margin-top: 4px; color: #22322d; font-size: 21px; line-height: 25px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.state-metrics strong.text-value { overflow: hidden; font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.state-metrics small { margin-top: 2px; color: #8a959e; font-size: 9px; line-height: 14px; }
+.postal-highlight { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 58px; border-bottom: 1px solid #e4e9e6; }
+.postal-highlight strong { color: #007d54; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.state-ranking { padding-top: 18px; }
+.state-ranking > span { margin-bottom: 8px; }
+.state-ranking button { width: 100%; min-height: 34px; display: grid; grid-template-columns: 28px minmax(0,1fr) 38px; align-items: center; gap: 9px; border: 0; border-radius: 5px; background: transparent; padding: 0 5px; color: #64717c; font-size: 10px; text-align: left; }
+.state-ranking button:hover, .state-ranking button.is-active { background: #eef5f2; color: #273a33; }
+.state-ranking button > strong { font-size: 11px; font-weight: 650; }
+.state-ranking button > i { height: 4px; border-radius: 3px; background: #e3e9e6; overflow: hidden; }
+.state-ranking button > i span { display: block; height: 100%; border-radius: inherit; background: #30a47d; }
+.state-ranking button > span { text-align: right; font-variant-numeric: tabular-nums; }
+
 .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
 .chart-card { min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; overflow: hidden; }
 .chart-card:first-child { grid-column: 1 / -1; }
@@ -129,6 +168,9 @@
   .client-form { width: 100%; }
   .analysis-controls { align-items: flex-start; flex-wrap: wrap; }
   .aggregation-note { width: 100%; margin: 0; text-align: left; }
+  .heatmap-header { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .heatmap-content { grid-template-columns: 1fr; }
+  .brazil-map-wrapper { border-right: 0; border-bottom: 1px solid #e8ebee; }
   .charts-grid { grid-template-columns: 1fr; }
   .chart-card:first-child { grid-column: auto; }
 }
@@ -146,6 +188,12 @@
   .control-group, .segmented-control, .carrier-filter, .carrier-filter summary { width: 100%; }
   .segmented-control button { flex: 1; }
   .carrier-options { left: 0; right: auto; width: 100%; }
+  .heatmap-header { padding: 16px; }
+  .heat-scale { width: 100%; }
+  .heat-scale span { font-size: 9px; }
+  .brazil-map-wrapper { padding: 16px 8px; }
+  .state-insights { padding: 18px 16px; }
+  .state-metrics strong { font-size: 18px; }
   .chart-card-header { align-items: center; padding: 14px 16px; }
   .chart-card-icon { width: 38px; height: 38px; }
   .chart-container { height: 330px; padding: 16px 10px 14px; }

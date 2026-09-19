@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { FormEvent, useMemo, useState } from "react"
+import { BrazilMap, MapChart } from "@arkn/react-map-chart"
 import {
   ChartHistogramIcon,
   Clock01Icon,
@@ -45,11 +46,13 @@ ChartJS.defaults.font.size = 12
 ChartJS.defaults.color = "#55626e"
 
 type QuotePoint = {
+  quotationId: string
   carrier: string
   freight: number
   deadline: number
   weight: number
   postalCode: string
+  state: string
 }
 
 type QuotationResponse = {
@@ -62,6 +65,45 @@ type QuotationResponse = {
 type Metric = "median" | "mean"
 type DeadlineWindow = 7 | 15
 type DatasetWithCounts = { counts: number[] }
+
+type StateSummary = {
+  state: string
+  volume: number
+  share: number
+  freight: number
+  mainCarrier: string
+  mainPostalPrefix: string
+}
+
+const stateNames: Record<string, string> = {
+  AC: "Acre",
+  AL: "Alagoas",
+  AP: "Amapá",
+  AM: "Amazonas",
+  BA: "Bahia",
+  CE: "Ceará",
+  DF: "Distrito Federal",
+  ES: "Espírito Santo",
+  GO: "Goiás",
+  MA: "Maranhão",
+  MT: "Mato Grosso",
+  MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais",
+  PA: "Pará",
+  PB: "Paraíba",
+  PR: "Paraná",
+  PE: "Pernambuco",
+  PI: "Piauí",
+  RJ: "Rio de Janeiro",
+  RN: "Rio Grande do Norte",
+  RS: "Rio Grande do Sul",
+  RO: "Rondônia",
+  RR: "Roraima",
+  SC: "Santa Catarina",
+  SP: "São Paulo",
+  SE: "Sergipe",
+  TO: "Tocantins",
+}
 
 const carrierColors = ["#009161", "#395b50", "#47ad88", "#006b49", "#7ca99a"]
 
@@ -324,6 +366,221 @@ function createPostalCodeData(
     labels: prefixes.map((prefix) => `${prefix}-*****`),
     datasets,
   }
+}
+
+function createStateSummaries(
+  points: QuotePoint[],
+  metric: Metric
+): StateSummary[] {
+  const totalQuotations = new Set(points.map((point) => point.quotationId)).size
+  const byState = points.reduce<Record<string, QuotePoint[]>>(
+    (groups, point) => {
+      groups[point.state] ??= []
+      groups[point.state].push(point)
+      return groups
+    },
+    {}
+  )
+
+  return Object.entries(byState)
+    .map(([state, statePoints]) => {
+      const volume = new Set(statePoints.map((point) => point.quotationId)).size
+      const carrierCounts = statePoints.reduce<Record<string, number>>(
+        (counts, point) => {
+          counts[point.carrier] = (counts[point.carrier] ?? 0) + 1
+          return counts
+        },
+        {}
+      )
+      const postalCounts = statePoints.reduce<Record<string, Set<string>>>(
+        (counts, point) => {
+          const prefix = point.postalCode.slice(0, 3)
+          counts[prefix] ??= new Set()
+          counts[prefix].add(point.quotationId)
+          return counts
+        },
+        {}
+      )
+
+      const mainCarrier =
+        Object.entries(carrierCounts).sort(
+          ([, first], [, second]) => second - first
+        )[0]?.[0] ?? "—"
+      const mainPostalPrefix =
+        Object.entries(postalCounts).sort(
+          ([, first], [, second]) => second.size - first.size
+        )[0]?.[0] ?? "—"
+
+      return {
+        state,
+        volume,
+        share: totalQuotations ? (volume / totalQuotations) * 100 : 0,
+        freight:
+          aggregate(
+            statePoints.map((point) => point.freight),
+            metric
+          ) ?? 0,
+        mainCarrier,
+        mainPostalPrefix,
+      }
+    })
+    .sort((first, second) => second.volume - first.volume)
+}
+
+function BrazilHeatMap({
+  points,
+  metric,
+}: {
+  points: QuotePoint[]
+  metric: Metric
+}) {
+  const [selectedState, setSelectedState] = useState<string | null>(null)
+  const summaries = useMemo(
+    () => createStateSummaries(points, metric),
+    [points, metric]
+  )
+  const activeSummary =
+    summaries.find((summary) => summary.state === selectedState) ?? summaries[0]
+  const maximumVolume = summaries[0]?.volume ?? 1
+  const mapData = Object.fromEntries(
+    summaries.map((summary) => [
+      `BR-${summary.state}`,
+      {
+        value: summary.volume,
+        legendLabel: `${stateNames[summary.state] ?? summary.state}: ${summary.volume.toLocaleString("pt-BR")} cotações`,
+      },
+    ])
+  )
+
+  return (
+    <section className="heatmap-card" aria-labelledby="heatmap-title">
+      <div className="heatmap-header">
+        <div>
+          <span className="eyebrow">Distribuição geográfica</span>
+          <h2 id="heatmap-title">Volume de cotações por estado</h2>
+          <p>
+            A intensidade representa solicitações únicas de frete. Selecione um
+            estado para analisar o destino.
+          </p>
+        </div>
+        <div className="heat-scale" aria-label="Escala do mapa">
+          <span>Menor volume</span>
+          <i />
+          <i />
+          <i />
+          <i />
+          <span>Maior volume</span>
+        </div>
+      </div>
+
+      <div className="heatmap-content">
+        <div className="brazil-map-wrapper">
+          <MapChart
+            data={mapData}
+            baseColor="#009161"
+            height={410}
+            width="100%"
+            displayLegend
+            displayLegendWhenEmpty={false}
+            legendBgColor="#173d31"
+            legendTextColor="#ffffff"
+            legendDividerColor="rgba(255,255,255,.25)"
+            defaultFillColor="#edf1ef"
+            defaultFillHoverColor="#dce7e2"
+            defaultStrokeColor="#ffffff"
+            defaultStrokeHoverColor="#ffffff"
+            forceCursorPointer
+            onMapItemClick={(id) => {
+              const state = id?.replace("BR-", "") ?? null
+              if (summaries.some((summary) => summary.state === state)) {
+                setSelectedState(state)
+              }
+            }}
+          >
+            <BrazilMap />
+          </MapChart>
+        </div>
+
+        <aside className="state-insights">
+          {activeSummary ? (
+            <>
+              <div className="selected-state-heading">
+                <span>Estado selecionado</span>
+                <h3>
+                  {activeSummary.state} · {stateNames[activeSummary.state]}
+                </h3>
+              </div>
+
+              <div className="state-metrics">
+                <div>
+                  <span>Volume</span>
+                  <strong>
+                    {activeSummary.volume.toLocaleString("pt-BR")}
+                  </strong>
+                  <small>solicitações únicas</small>
+                </div>
+                <div>
+                  <span>Participação</span>
+                  <strong>
+                    {activeSummary.share.toLocaleString("pt-BR", {
+                      maximumFractionDigits: 1,
+                    })}
+                    %
+                  </strong>
+                  <small>do volume exibido</small>
+                </div>
+                <div>
+                  <span>Frete {metric === "median" ? "mediano" : "médio"}</span>
+                  <strong>{formatCurrency(activeSummary.freight)}</strong>
+                  <small>nas transportadoras selecionadas</small>
+                </div>
+                <div>
+                  <span>Transportadora líder</span>
+                  <strong className="text-value">
+                    {activeSummary.mainCarrier}
+                  </strong>
+                  <small>mais presente nas respostas</small>
+                </div>
+              </div>
+
+              <div className="postal-highlight">
+                <span>Faixa de CEP com maior demanda</span>
+                <strong>{activeSummary.mainPostalPrefix}-*****</strong>
+              </div>
+
+              <div className="state-ranking">
+                <span>Estados com maior volume</span>
+                {summaries.slice(0, 5).map((summary) => (
+                  <button
+                    type="button"
+                    key={summary.state}
+                    className={
+                      summary.state === activeSummary.state
+                        ? "is-active"
+                        : undefined
+                    }
+                    onClick={() => setSelectedState(summary.state)}
+                  >
+                    <strong>{summary.state}</strong>
+                    <i>
+                      <span
+                        style={{
+                          width: `${(summary.volume / maximumVolume) * 100}%`,
+                        }}
+                      />
+                    </i>
+                    <span>{summary.volume.toLocaleString("pt-BR")}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p>Nenhum destino disponível para o mapa.</p>
+          )}
+        </aside>
+      </div>
+    </section>
+  )
 }
 
 function ChartCard({
@@ -669,31 +926,36 @@ export default function Page() {
                 <strong>Selecione pelo menos uma transportadora</strong>
               </section>
             ) : (
-              <section className="charts-grid" aria-label="Gráficos de frete">
-                <ChartCard
-                  icon={Clock01Icon}
-                  title="Frete × prazo × transportadora"
-                  description={`${metricLabel} do frete em janelas fixas de ${deadlineWindow} dias.`}
-                >
-                  <Line options={lineOptions} data={deadlineData} />
-                </ChartCard>
+              <>
 
-                <ChartCard
-                  icon={WeightScale01Icon}
-                  title="Frete × peso × transportadora"
-                  description={`${metricLabel} do frete por faixa de peso real da carga.`}
-                >
-                  <Line options={lineOptions} data={weightData} />
-                </ChartCard>
+                <section className="charts-grid" aria-label="Gráficos de frete">
+                  <ChartCard
+                    icon={Clock01Icon}
+                    title="Frete × prazo × transportadora"
+                    description={`${metricLabel} do frete em janelas fixas de ${deadlineWindow} dias.`}
+                  >
+                    <Line options={lineOptions} data={deadlineData} />
+                  </ChartCard>
 
-                <ChartCard
-                  icon={Location01Icon}
-                  title="Frete × CEP × transportadora"
-                  description={`${metricLabel} do frete nas 10 faixas de CEP com maior volume.`}
-                >
-                  <Bar options={barOptions} data={postalCodeData} />
-                </ChartCard>
-              </section>
+                  <ChartCard
+                    icon={WeightScale01Icon}
+                    title="Frete × peso × transportadora"
+                    description={`${metricLabel} do frete por faixa de peso real da carga.`}
+                  >
+                    <Line options={lineOptions} data={weightData} />
+                  </ChartCard>
+
+                  <ChartCard
+                    icon={Location01Icon}
+                    title="Frete × CEP × transportadora"
+                    description={`${metricLabel} do frete nas 10 faixas de CEP com maior volume.`}
+                  >
+                    <Bar options={barOptions} data={postalCodeData} />
+                  </ChartCard>
+                </section>
+
+                <BrazilHeatMap points={visiblePoints} metric={metric} />
+              </>
             )}
           </>
         )}

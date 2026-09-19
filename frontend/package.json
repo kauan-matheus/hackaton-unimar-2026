@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@arkn/react-map-chart": "^0.4.2",
     "@base-ui/react": "^1.8.0",
     "@hugeicons/core-free-icons": "^4.3.4",
     "@hugeicons/react": "^1.1.10",
